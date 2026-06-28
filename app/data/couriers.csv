@@ -1,0 +1,9 @@
+courier_id,courier_name,region,average_delivery_days,on_time_rate,delay_rate,cost_per_km
+CR-001,ExpressGo,Metro Manila,1.2,94,6,18
+CR-002,IslandShip,Visayas,2.4,86,14,24
+CR-003,MindanaoMove,Mindanao,3.1,78,22,28
+CR-004,LuzonRapid,Luzon,2.0,88,12,22
+CR-005,BudgetHaul,National,4.2,72,28,15
+CR-006,PremiumSameDay,Metro Manila,0.8,96,4,35
+CR-007,ProvincialLink,Luzon,2.8,81,19,20
+CR-008,InterIsland Priority,National,3.5,80,20,30

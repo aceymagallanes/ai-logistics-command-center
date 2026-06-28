@@ -1,0 +1,7 @@
+warehouse_id,warehouse_name,city,region,max_daily_capacity,current_daily_load,utilization_rate
+WH-001,Metro Manila Fulfillment Center,Taguig,Metro Manila,5000,4200,84
+WH-002,Luzon North Distribution Hub,Clark,Luzon,3500,3150,90
+WH-003,Visayas Fulfillment Center,Cebu,Visayas,3000,2520,84
+WH-004,Mindanao Distribution Hub,Davao,Mindanao,2500,2300,92
+WH-005,Overflow Warehouse South,Laguna,Luzon,2000,900,45
+WH-006,National Backup Fulfillment Center,Batangas,National,1800,1080,60
