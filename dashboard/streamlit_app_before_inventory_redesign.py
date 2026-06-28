@@ -179,21 +179,6 @@ EXCEPTION_COLORS = {
     "High Value Customer Risk": "#EC4899",
 }
 
-
-INVENTORY_RISK_COLORS = {
-    "Low": "#10B981",
-    "Medium": "#F59E0B",
-    "High": "#F97316",
-    "Critical": "#DC2626",
-}
-
-REPLENISHMENT_COLORS = {
-    "Healthy": "#0F766E",
-    "Reorder Needed": "#2563EB",
-    "Critical Replenishment Needed": "#DC2626",
-    "Monitor Closely": "#F59E0B",
-}
-
 def apply_chart_style(fig, height=420):
     """
     Apply a consistent executive dashboard style to Plotly charts.
@@ -1106,779 +1091,96 @@ def courier_performance(data):
 
 
 def inventory_risk(data):
-    inventory_report = data["inventory_risk"].copy()
+    inventory = data["inventory_risk"]
 
     st.markdown('<div class="section-title">Inventory Risk</div>', unsafe_allow_html=True)
 
-    total_records = len(inventory_report)
+    col1, col2 = st.columns(2)
 
-    risk_order = ["Critical", "High", "Medium", "Low"]
-    replenishment_order = [
-        "Critical Replenishment Needed",
-        "Reorder Needed",
-        "Monitor Closely",
-        "Healthy",
-    ]
-
-    risk_counts = (
-        inventory_report["stockout_risk"]
-        .value_counts()
-        .reindex(risk_order, fill_value=0)
-        .reset_index()
-    )
+    risk_counts = inventory["stockout_risk"].value_counts().reset_index()
     risk_counts.columns = ["stockout_risk", "count"]
 
-    replenishment_counts = (
-        inventory_report["replenishment_status"]
-        .value_counts()
-        .reindex(replenishment_order, fill_value=0)
-        .reset_index()
-    )
-    replenishment_counts.columns = ["replenishment_status", "count"]
-
-    high_critical_count = int(
-        inventory_report["stockout_risk"].isin(["High", "Critical"]).sum()
-    )
-
-    critical_replenishment_count = int(
-        (inventory_report["replenishment_status"] == "Critical Replenishment Needed").sum()
-    )
-
-    reorder_needed_count = int(
-        (inventory_report["replenishment_status"] == "Reorder Needed").sum()
-    )
-
-    healthy_count = int(
-        (inventory_report["replenishment_status"] == "Healthy").sum()
-    )
-
-    healthy_pct = (healthy_count / total_records * 100) if total_records > 0 else 0
-    high_critical_pct = (high_critical_count / total_records * 100) if total_records > 0 else 0
-
-    colm1, colm2, colm3, colm4 = st.columns(4)
-
-    with colm1:
-        metric_card(
-            "SKU-Warehouse Records",
-            f"{total_records:,}",
-            "Inventory positions monitored across warehouses",
-        )
-
-    with colm2:
-        metric_card(
-            "High / Critical Risk",
-            f"{high_critical_count:,}",
-            f"{high_critical_pct:.1f}% of monitored inventory positions",
-        )
-
-    with colm3:
-        metric_card(
-            "Critical Replenishment",
-            f"{critical_replenishment_count:,}",
-            "Inventory records requiring immediate replenishment",
-        )
-
-    with colm4:
-        metric_card(
-            "Healthy Inventory",
-            f"{healthy_pct:.1f}%",
-            "Inventory positions currently in healthy status",
-        )
-
-    st.markdown('<div style="height: 12px;"></div>', unsafe_allow_html=True)
-
-    col1, col2 = st.columns([1, 1], gap="small")
-
     with col1:
-        risk_counts_chart = risk_counts.sort_values(
-            by="count",
-            ascending=True
-        )
-
-        risk_labels = risk_counts_chart["stockout_risk"].tolist()
-        bold_risk_labels = [f"<b>{label}</b>" for label in risk_labels]
-
-        max_count = risk_counts_chart["count"].max()
-        x_axis_max = max_count * 1.20 if max_count > 0 else 10
-
         fig = px.bar(
-            risk_counts_chart,
-            x="count",
-            y="stockout_risk",
-            orientation="h",
-            color="stockout_risk",
-            color_discrete_map=INVENTORY_RISK_COLORS,
+            risk_counts,
+            x="stockout_risk",
+            y="count",
+            title="Inventory Stockout Risk Count",
             text="count",
-            title="Stockout Risk Distribution",
-            hover_data={"count": True},
         )
-
-        fig.update_traces(
-            textposition="outside",
-            cliponaxis=False,
-            textfont=dict(
-                color="#0F172A",
-                size=14,
-                family="Arial, sans-serif",
-            ),
-            marker_line_color="white",
-            marker_line_width=1.2,
-        )
-
-        fig = apply_chart_style(fig, height=420)
-
-        fig.update_layout(
-            showlegend=False,
-            bargap=0.30,
-            xaxis_title="SKU-Warehouse Records",
-            yaxis_title="",
-            margin=dict(l=20, r=90, t=70, b=60),
-        )
-
-        fig.update_xaxes(
-            showgrid=False,
-            zeroline=False,
-            range=[0, x_axis_max],
-        )
-
-        fig.update_yaxes(
-            showgrid=False,
-            zeroline=False,
-            tickmode="array",
-            tickvals=risk_labels,
-            ticktext=bold_risk_labels,
-            automargin=True,
-        )
-
-        st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+        fig.update_layout(height=400, xaxis_title="", yaxis_title="SKU-Warehouse Records")
+        st.plotly_chart(fig, use_container_width=True)
 
     with col2:
+        status_counts = inventory["replenishment_status"].value_counts().reset_index()
+        status_counts.columns = ["replenishment_status", "count"]
+
         fig = px.pie(
-            replenishment_counts,
+            status_counts,
             names="replenishment_status",
             values="count",
-            hole=0.58,
-            title="Replenishment Status Mix",
-            color="replenishment_status",
-            color_discrete_map=REPLENISHMENT_COLORS,
+            title="Replenishment Status",
+            hole=0.45,
         )
+        fig.update_layout(height=400)
+        st.plotly_chart(fig, use_container_width=True)
 
-        fig.update_traces(
-            textinfo="percent",
-            textposition="inside",
-            marker=dict(line=dict(color="white", width=2)),
-        )
-
-        fig = apply_chart_style(fig, height=420)
-
-        fig.update_layout(
-            showlegend=False,
-            margin=dict(l=20, r=20, t=70, b=30),
-        )
-
-        st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
-
-    risk_rank_map = {"Critical": 1, "High": 2, "Medium": 3, "Low": 4}
-    inventory_report["risk_rank"] = inventory_report["stockout_risk"].map(risk_rank_map).fillna(99)
-
-    actionable_inventory = inventory_report[
-        inventory_report["stockout_risk"].isin(["High", "Critical"])
-    ].copy()
-
-    if not actionable_inventory.empty:
-        hotspot_warehouse = (
-            actionable_inventory.groupby("warehouse_id")
-            .size()
-            .reset_index(name="high_critical_count")
-            .sort_values("high_critical_count", ascending=False)
-            .iloc[0]
-        )
-
-        top_critical_item = actionable_inventory.sort_values(
-            by=["risk_rank", "available_quantity"]
-        ).iloc[0]
-
-        st.markdown(
-            f"""
-            <div class="insight-card">
-                <b>Director-Level Interpretation:</b> Inventory conditions are broadly stable, with
-                <b>{healthy_pct:.1f}%</b> of SKU-warehouse positions currently in healthy status.
-                However, <b>{high_critical_count}</b> records are in <b>High</b> or <b>Critical</b>
-                stockout risk, representing <b>{high_critical_pct:.1f}%</b> of monitored inventory positions.
-                <br><br>
-                <b>Operational Risk Signal:</b> There are <b>{critical_replenishment_count}</b> records requiring
-                immediate replenishment and an additional <b>{reorder_needed_count}</b> records already in
-                reorder-needed status. The main inventory hotspot is <b>{hotspot_warehouse["warehouse_id"]}</b>,
-                with <b>{int(hotspot_warehouse["high_critical_count"])}</b> high/critical-risk inventory positions.
-                <br><br>
-                <b>Most Urgent Item:</b> The most exposed inventory position is
-                <b>{top_critical_item["product_name"]}</b> in <b>{top_critical_item["warehouse_id"]}</b>,
-                with available quantity of <b>{int(top_critical_item["available_quantity"])}</b>,
-                safety stock level of <b>{int(top_critical_item["safety_stock_level"])}</b>,
-                and a replenishment status of <b>{top_critical_item["replenishment_status"]}</b>.
-                <br><br>
-                <b>Recommended Management Action:</b> Expedite replenishment for critical items,
-                rebalance stock across warehouses where practical, protect high-demand and high-value SKUs,
-                and establish a daily review cadence for High and Critical stockout-risk positions.
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    else:
-        st.markdown(
-            f"""
-            <div class="insight-card">
-                <b>Director-Level Interpretation:</b> Inventory is currently in a stable state.
-                <b>{healthy_pct:.1f}%</b> of records are healthy, with no major High or Critical
-                stockout-risk positions requiring immediate intervention.
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    st.markdown('<div class="section-title">Top At-Risk Inventory Positions</div>', unsafe_allow_html=True)
-
-    top_risk_table = inventory_report.copy()
-    top_risk_table = top_risk_table.sort_values(
-        by=["risk_rank", "available_quantity"],
-        ascending=[True, True]
+    st.dataframe(
+        inventory.sort_values(
+            by=["stockout_risk", "available_quantity"],
+            ascending=[True, True],
+        ),
+        use_container_width=True,
+        height=520,
     )
-
-    top_risk_table = top_risk_table[
-        [
-            "warehouse_id",
-            "product_sku",
-            "product_name",
-            "available_quantity",
-            "safety_stock_level",
-            "reorder_point",
-            "stockout_risk",
-            "replenishment_status",
-        ]
-    ].head(10)
-
-    st.dataframe(top_risk_table, use_container_width=True, height=320)
 
 
 def ai_executive_brief(data):
     executive_json = data["executive_json"]
-    orders = data["orders"].copy()
-    exception_summary = data["exception_summary"].copy()
-    owning_team_summary = data["owning_team_summary"].copy()
-    warehouse_summary = data["warehouse_summary"].copy()
-    courier_summary = data["courier_summary"].copy()
-    region_summary = data["region_summary"].copy()
-
     kpis = executive_json.get("executive_kpis", {})
     top_risks = executive_json.get("top_risks", [])
+    recommended_actions = executive_json.get("recommended_actions", [])
     top_priority_orders = executive_json.get("top_priority_orders", [])
 
-    st.markdown('<div class="section-title">Executive Operations Brief</div>', unsafe_allow_html=True)
-
-    overall_status = kpis.get("overall_status", "Unknown")
-    total_orders = int(kpis.get("total_orders", 0))
-    active_exceptions = int(kpis.get("active_exceptions", 0))
-    active_exception_rate = float(kpis.get("active_exception_rate", 0))
-    revenue_at_risk = float(kpis.get("revenue_at_risk", 0))
-    p1_p2_count = int(kpis.get("p1_p2_priority_exceptions", 0))
-    priority_exception_rate = float(kpis.get("priority_exception_rate", 0))
-    otif_estimate = float(kpis.get("otif_estimate", 0))
-    escalation_required_count = int(kpis.get("escalation_required_count", 0))
-    escalation_rate = float(kpis.get("escalation_rate", 0))
-    platinum_orders_at_risk = int(kpis.get("platinum_orders_at_risk", 0))
-    gold_orders_at_risk = int(kpis.get("gold_orders_at_risk", 0))
-
-    actionable_exceptions = exception_summary[
-        exception_summary["exception_type"] != "No Immediate Exception"
-    ].copy()
-
-    if not actionable_exceptions.empty:
-        top_actionable_exception = actionable_exceptions.sort_values(
-            "order_count",
-            ascending=False
-        ).iloc[0]
-    else:
-        top_actionable_exception = None
-
-    top_owning_team = owning_team_summary.sort_values(
-        "order_count",
-        ascending=False
-    ).iloc[0]
-
-    top_escalation_team = owning_team_summary.sort_values(
-        "escalations",
-        ascending=False
-    ).iloc[0]
-
-    top_region_by_rate = region_summary.sort_values(
-        "active_exception_rate",
-        ascending=False
-    ).iloc[0]
-
-    top_region_by_volume = region_summary.sort_values(
-        "active_exceptions",
-        ascending=False
-    ).iloc[0]
-
-    top_courier_risk = courier_summary.sort_values(
-        "high_risk_orders",
-        ascending=False
-    ).iloc[0]
-
-    top_warehouse_risk = warehouse_summary.sort_values(
-        "high_risk_orders",
-        ascending=False
-    ).iloc[0]
-
-    status_color = "#DC2626" if overall_status == "At Risk" else "#F59E0B" if overall_status == "Watch" else "#10B981"
-    status_background = "#FEF2F2" if overall_status == "At Risk" else "#FFFBEB" if overall_status == "Watch" else "#ECFDF5"
+    st.markdown('<div class="section-title">AI Executive Brief Input</div>', unsafe_allow_html=True)
 
     st.markdown(
         f"""
-        <div style="
-            background: linear-gradient(135deg, #0F172A 0%, #064E3B 100%);
-            border-radius: 24px;
-            padding: 30px;
-            color: white;
-            box-shadow: 0px 18px 45px rgba(15, 23, 42, 0.18);
-            margin-bottom: 24px;
-        ">
-            <div style="font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; color: #A7F3D0; font-weight: 800;">
-                AI Logistics Control Tower
-            </div>
-            <div style="font-size: 34px; font-weight: 900; margin-top: 8px;">
-                Executive Operations Brief
-            </div>
-            <div style="font-size: 16px; color: #D1FAE5; margin-top: 8px; max-width: 1100px;">
-                Leadership-ready view of fulfillment risk, priority exceptions, revenue exposure,
-                operational ownership, and recommended action plan.
-            </div>
-            <div style="
-                display: inline-block;
-                background-color: {status_background};
-                color: {status_color};
-                padding: 9px 16px;
-                border-radius: 999px;
-                font-size: 14px;
-                font-weight: 900;
-                margin-top: 18px;
-            ">
-                Overall Status: {overall_status}
-            </div>
+        <div class="critical-card">
+            <b>Overall Status:</b> {executive_json.get("overall_status", "Unknown")}<br>
+            <b>Total Orders:</b> {kpis.get("total_orders", 0):,}<br>
+            <b>Active Exceptions:</b> {kpis.get("active_exceptions", 0):,}<br>
+            <b>Revenue at Risk:</b> {peso(kpis.get("revenue_at_risk", 0))}<br>
+            <b>P1/P2 Priority Exceptions:</b> {kpis.get("p1_p2_priority_exceptions", 0):,}
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2 = st.columns(2)
 
     with col1:
-        metric_card(
-            "Orders Analyzed",
-            f"{total_orders:,}",
-            "Total orders included in the current operating view",
-        )
-
-    with col2:
-        metric_card(
-            "Active Exceptions",
-            f"{active_exceptions:,}",
-            f"{active_exception_rate:.1f}% of analyzed orders",
-        )
-
-    with col3:
-        metric_card(
-            "Revenue at Risk",
-            peso(revenue_at_risk),
-            "High and Critical delay-risk order value",
-        )
-
-    with col4:
-        metric_card(
-            "P1/P2 Exceptions",
-            f"{p1_p2_count:,}",
-            f"{priority_exception_rate:.1f}% priority exception rate",
-        )
-
-    col5, col6, col7, col8 = st.columns(4)
-
-    with col5:
-        metric_card(
-            "OTIF Estimate",
-            f"{otif_estimate:.1f}%",
-            "Estimated on-time-in-full performance",
-        )
-
-    with col6:
-        metric_card(
-            "Escalations Required",
-            f"{escalation_required_count:,}",
-            f"{escalation_rate:.1f}% escalation rate",
-        )
-
-    with col7:
-        metric_card(
-            "Platinum at Risk",
-            f"{platinum_orders_at_risk:,}",
-            "Premium customer orders at elevated risk",
-        )
-
-    with col8:
-        metric_card(
-            "Gold at Risk",
-            f"{gold_orders_at_risk:,}",
-            "Gold customer orders at elevated risk",
-        )
-
-    st.markdown('<div class="section-title">Board-Level Summary</div>', unsafe_allow_html=True)
-
-    if top_actionable_exception is not None:
-        st.markdown(
-            f"""
-            <div class="insight-card">
-                <b>Executive Summary:</b> The logistics network is currently classified as
-                <b>{overall_status}</b>. Out of <b>{total_orders:,}</b> analyzed orders,
-                <b>{active_exceptions:,}</b> have active exceptions and
-                <b>{p1_p2_count:,}</b> are classified as P1/P2 priority cases.
-                <br><br>
-                <b>Primary Risk Driver:</b> The leading actionable issue is
-                <b>{top_actionable_exception["exception_type"]}</b>, affecting
-                <b>{int(top_actionable_exception["order_count"]):,}</b> orders with approximately
-                <b>{peso(top_actionable_exception["revenue_total"])}</b> in associated order value.
-                <br><br>
-                <b>Commercial Exposure:</b> High and Critical risk orders represent
-                <b>{peso(revenue_at_risk)}</b> in revenue at risk. This should be treated as a
-                management attention item because it can affect SLA compliance, customer experience,
-                refund exposure, rework cost, and repeat purchase confidence.
-                <br><br>
-                <b>Operational Hotspot:</b> <b>{top_region_by_rate["customer_region"]}</b> has the
-                highest active exception rate at <b>{top_region_by_rate["active_exception_rate"]:.1f}%</b>,
-                while <b>{top_region_by_volume["customer_region"]}</b> has the highest exception volume
-                with <b>{int(top_region_by_volume["active_exceptions"]):,}</b> active exceptions.
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    else:
-        st.markdown(
-            """
-            <div class="insight-card">
-                <b>Executive Summary:</b> No major actionable exception pattern was detected.
-                Operations can remain under standard monitoring.
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    st.markdown('<div class="section-title">Strategic Risk Portfolio</div>', unsafe_allow_html=True)
-
-    risk_col1, risk_col2, risk_col3 = st.columns(3)
-
-    top_risks_display = top_risks[:3]
-
-    for idx, risk in enumerate(top_risks_display):
-        target_col = [risk_col1, risk_col2, risk_col3][idx]
-
-        with target_col:
+        st.subheader("Top Risks")
+        for risk in top_risks:
             st.markdown(
                 f"""
-                <div style="
-                    background-color: white;
-                    border-radius: 20px;
-                    padding: 24px;
-                    box-shadow: 0px 14px 32px rgba(15, 23, 42, 0.08);
-                    border-top: 6px solid #047857;
-                    min-height: 230px;
-                ">
-                    <div style="font-size: 13px; color: #64748B; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 900;">
-                        Risk Area {idx + 1}
-                    </div>
-                    <div style="font-size: 22px; font-weight: 900; color: #0F172A; margin-top: 8px;">
-                        {risk.get("risk_type")}
-                    </div>
-                    <div style="margin-top: 16px; color: #334155; line-height: 1.7;">
-                        <b>Affected Orders:</b> {risk.get("affected_orders", 0):,}<br>
-                        <b>Revenue Impact:</b> {peso(risk.get("revenue_impact", 0))}<br>
-                        <b>Avg Risk Score:</b> {risk.get("average_delay_risk_score")}
-                    </div>
+                <div class="insight-card">
+                    <b>{risk.get("risk_type")}</b><br>
+                    Affected Orders: {risk.get("affected_orders")}<br>
+                    Revenue Impact: {peso(risk.get("revenue_impact", 0))}<br>
+                    Avg Risk Score: {risk.get("average_delay_risk_score")}
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
 
-    st.markdown('<div class="section-title">Operational Ownership View</div>', unsafe_allow_html=True)
+    with col2:
+        st.subheader("Recommended Actions")
+        for action in recommended_actions:
+            st.markdown(f"- {action}")
 
-    owner_col1, owner_col2 = st.columns(2)
-
-    with owner_col1:
-        owner_summary = owning_team_summary.sort_values(
-            "order_count",
-            ascending=True
-        )
-
-        owner_names = owner_summary["owning_team"].tolist()
-        bold_owner_names = [f"<b>{name}</b>" for name in owner_names]
-
-        max_owner_count = owner_summary["order_count"].max()
-        x_axis_max = max_owner_count * 1.20 if max_owner_count > 0 else 10
-
-        fig = px.bar(
-            owner_summary,
-            x="order_count",
-            y="owning_team",
-            orientation="h",
-            text="order_count",
-            color="owning_team",
-            title="Exception Workload by Owning Team",
-        )
-
-        fig.update_traces(
-            textposition="outside",
-            cliponaxis=False,
-            marker_line_color="white",
-            marker_line_width=1.2,
-            textfont=dict(color="#0F172A", size=13),
-        )
-
-        fig = apply_chart_style(fig, height=430)
-
-        fig.update_layout(
-            showlegend=False,
-            xaxis_title="Orders",
-            yaxis_title="",
-            margin=dict(l=20, r=80, t=70, b=60),
-        )
-
-        fig.update_xaxes(
-            showgrid=False,
-            zeroline=False,
-            range=[0, x_axis_max],
-        )
-
-        fig.update_yaxes(
-            showgrid=False,
-            zeroline=False,
-            tickmode="array",
-            tickvals=owner_names,
-            ticktext=bold_owner_names,
-            automargin=True,
-        )
-
-        st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
-
-    with owner_col2:
-        escalation_summary = owning_team_summary.sort_values(
-            "escalations",
-            ascending=True
-        )
-
-        team_names = escalation_summary["owning_team"].tolist()
-        bold_team_names = [f"<b>{name}</b>" for name in team_names]
-
-        max_escalations = escalation_summary["escalations"].max()
-        escalation_axis_max = max_escalations * 1.25 if max_escalations > 0 else 10
-
-        fig = px.bar(
-            escalation_summary,
-            x="escalations",
-            y="owning_team",
-            orientation="h",
-            text="escalations",
-            color="owning_team",
-            title="Escalations by Owning Team",
-        )
-
-        fig.update_traces(
-            textposition="outside",
-            cliponaxis=False,
-            marker_line_color="white",
-            marker_line_width=1.2,
-            textfont=dict(color="#0F172A", size=13),
-        )
-
-        fig = apply_chart_style(fig, height=430)
-
-        fig.update_layout(
-            showlegend=False,
-            xaxis_title="Escalations",
-            yaxis_title="",
-            margin=dict(l=20, r=80, t=70, b=60),
-        )
-
-        fig.update_xaxes(
-            showgrid=False,
-            zeroline=False,
-            range=[0, escalation_axis_max],
-        )
-
-        fig.update_yaxes(
-            showgrid=False,
-            zeroline=False,
-            tickmode="array",
-            tickvals=team_names,
-            ticktext=bold_team_names,
-            automargin=True,
-        )
-
-        st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
-
-    st.markdown('<div class="section-title">Executive Recommendation Plan</div>', unsafe_allow_html=True)
-
-    st.markdown(
-        f"""
-        <div style="
-            background-color: white;
-            border-radius: 22px;
-            padding: 26px;
-            box-shadow: 0px 14px 34px rgba(15, 23, 42, 0.08);
-            border-left: 7px solid #047857;
-            margin-bottom: 18px;
-        ">
-            <div style="font-size: 20px; font-weight: 900; color: #0F172A; margin-bottom: 14px;">
-                1. Immediate Control Tower Escalation
-            </div>
-            <div style="line-height: 1.8; color: #334155;">
-                Activate same-day management review for all <b>{p1_p2_count:,}</b> P1/P2 exceptions.
-                Prioritize orders with High or Critical delay risk, Platinum and Gold customer tiers,
-                and high order value exposure. Escalation ownership should be assigned to
-                <b>{top_escalation_team["owning_team"]}</b>, which currently carries the highest escalation load.
-            </div>
-        </div>
-
-        <div style="
-            background-color: white;
-            border-radius: 22px;
-            padding: 26px;
-            box-shadow: 0px 14px 34px rgba(15, 23, 42, 0.08);
-            border-left: 7px solid #F97316;
-            margin-bottom: 18px;
-        ">
-            <div style="font-size: 20px; font-weight: 900; color: #0F172A; margin-bottom: 14px;">
-                2. Courier Risk Stabilization
-            </div>
-            <div style="line-height: 1.8; color: #334155;">
-                Review courier allocation for high-risk lanes. <b>{top_courier_risk["recommended_courier_name"]}</b>
-                currently has the highest high-risk order exposure with
-                <b>{int(top_courier_risk["high_risk_orders"]):,}</b> high-risk orders. Management should validate
-                backup courier capacity, move premium customer orders to lower-risk couriers where possible,
-                and create escalation triggers for partners exceeding the delay threshold.
-            </div>
-        </div>
-
-        <div style="
-            background-color: white;
-            border-radius: 22px;
-            padding: 26px;
-            box-shadow: 0px 14px 34px rgba(15, 23, 42, 0.08);
-            border-left: 7px solid #8B5CF6;
-            margin-bottom: 18px;
-        ">
-            <div style="font-size: 20px; font-weight: 900; color: #0F172A; margin-bottom: 14px;">
-                3. Warehouse and Fulfillment Balancing
-            </div>
-            <div style="line-height: 1.8; color: #334155;">
-                Review routing rules for <b>{top_warehouse_risk["recommended_warehouse_name"]}</b>, which currently
-                has the highest warehouse-linked high-risk order exposure with
-                <b>{int(top_warehouse_risk["high_risk_orders"]):,}</b> high-risk orders. Rebalance orders toward
-                lower-risk fulfillment nodes, validate overflow warehouse capacity, and protect SLA-sensitive
-                orders from congested routing paths.
-            </div>
-        </div>
-
-        <div style="
-            background-color: white;
-            border-radius: 22px;
-            padding: 26px;
-            box-shadow: 0px 14px 34px rgba(15, 23, 42, 0.08);
-            border-left: 7px solid #DC2626;
-            margin-bottom: 18px;
-        ">
-            <div style="font-size: 20px; font-weight: 900; color: #0F172A; margin-bottom: 14px;">
-                4. Customer Experience Protection
-            </div>
-            <div style="line-height: 1.8; color: #334155;">
-                Protect <b>{platinum_orders_at_risk:,}</b> Platinum and <b>{gold_orders_at_risk:,}</b> Gold
-                customer orders currently at elevated risk. For these orders, operations should trigger proactive
-                customer communication, priority dispatch, and exception resolution monitoring before SLA breach occurs.
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown('<div class="section-title">Recommended Action Timeline</div>', unsafe_allow_html=True)
-
-    timeline_col1, timeline_col2, timeline_col3 = st.columns(3)
-
-    with timeline_col1:
-        st.markdown(
-            f"""
-            <div class="critical-card">
-                <b>Next 24 Hours</b><br><br>
-                • Escalate all P1 exceptions<br>
-                • Review P1/P2 order list<br>
-                • Prioritize premium customer orders<br>
-                • Validate courier capacity for high-risk lanes<br>
-                • Confirm same-day ownership by responsible team
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    with timeline_col2:
-        st.markdown(
-            f"""
-            <div class="warning-card">
-                <b>Next 7 Days</b><br><br>
-                • Rebalance high-risk courier assignments<br>
-                • Review warehouse routing concentration<br>
-                • Validate replenishment risk for stockout-prone SKUs<br>
-                • Monitor exception closure rate daily<br>
-                • Create exception aging and SLA breach tracker
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    with timeline_col3:
-        st.markdown(
-            f"""
-            <div class="insight-card">
-                <b>Next 30 Days</b><br><br>
-                • Establish logistics control tower cadence<br>
-                • Create courier scorecard governance<br>
-                • Automate P1/P2 alerts via n8n<br>
-                • Add predictive threshold monitoring<br>
-                • Build management review pack for recurring operations governance
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    st.markdown('<div class="section-title">Top Priority Orders for Management Review</div>', unsafe_allow_html=True)
-
-    priority_orders_df = pd.DataFrame(top_priority_orders)
-
-    if not priority_orders_df.empty:
-        display_columns = [
-            "order_id",
-            "customer_region",
-            "customer_tier",
-            "order_value",
-            "delay_risk_score",
-            "delay_risk_category",
-            "exception_type",
-            "exception_priority",
-            "owning_team",
-            "recommended_action",
-        ]
-
-        priority_orders_df = priority_orders_df[display_columns]
-        priority_orders_df["order_value"] = priority_orders_df["order_value"].map(lambda x: f"₱{float(x):,.0f}")
-
-        st.dataframe(priority_orders_df, use_container_width=True, height=360)
-    else:
-        st.info("No P1/P2 priority orders found in the current dataset.")
+    st.subheader("Top Priority Orders")
+    st.dataframe(pd.DataFrame(top_priority_orders), use_container_width=True)
 
     with st.expander("View Raw Executive JSON for Claude / n8n"):
         st.json(executive_json)
