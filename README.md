@@ -1,5 +1,13 @@
 # AI Warehouse & Logistics Command Center
 
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://ai-logistics-command-center.streamlit.app)
+
+## Live Dashboard
+
+View the live dashboard here:
+
+https://ai-logistics-command-center.streamlit.app
+
 An executive-grade logistics intelligence system that simulates how an e-commerce company can monitor fulfillment risk, warehouse utilization, courier performance, inventory exposure, priority exceptions, and revenue at risk.
 
 This portfolio project was designed for companies operating high-volume logistics environments such as Amazon-style fulfillment networks, Shopee, Lazada, courier operations, retail distribution, and supply chain control towers.
